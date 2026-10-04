@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GitHub Cards · Release / Commit / PR / Issue / User / Org</title>
+<style>
+/* ==========================================================
+   Design Tokens
+   ========================================================== */
+:root, [data-theme="light"] {
+  --page: #f6f8fa;
+  --card: #ffffff;
+  --subtle: #f6f8fa;
+  --border: #d0d7de;
+  --border-muted: #e5e9ee;
+  --fg: #1f2328;
+  --muted: #59636e;
+  --accent: #0969da;
+  --green: #1a7f37;
+  --green-bg: #dafbe1;
+  --purple: #8250df;
+  --purple-bg: #fbefff;
+  --red: #cf222e;
+  --red-bg: #ffebe9;
+  --orange: #bc4c00;
+  --gray: #59636e;
+  --shadow: 0 1px 0 rgba(31,35,40,.04), 0 8px 24px rgba(140,149,159,.18);
+  --heat-0: #ebedf0; --heat-1: #9be9a8; --heat-2: #40c463; --heat-3: #30a14e; --heat-4: #216e39;
+}
+[data-theme="dark"] {
+  --page: #010409;
+  --card: #0d1117;
+  --subtle: #151b23;
+  --border: #30363d;
+  --border-muted: #21262d;
+  --fg: #e6edf3;
+  --muted: #9198a1;
+  --accent: #4493f8;
+  --green: #3fb950;
+  --green-bg: rgba(46,160,67,.15);
+  --purple: #ab7df8;
+  --purple-bg: rgba(171,125,248,.15);
+  --red: #f85149;
+  --red-bg: rgba(248,81,73,.15);
+  --orange: #db6d28;
+  --gray: #9198a1;
+  --shadow: 0 0 0 1px #30363d, 0 8px 24px rgba(1,4,9,.6);
+  --heat-0: #161b22; --heat-1: #0e4429; --heat-2: #006d32; --heat-3: #26a641; --heat-4: #39d353;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--page);
+  color: var(--fg);
+  font-size: 14px;
+  line-height: 1.5;
+  transition: background .2s, color .2s;
+}
+code, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ==========================================================
+   Page chrome (demo only)
+   ========================================================== */
+.topbar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 32px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+.topbar h1 { font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px; }
+.topbar nav { display: flex; gap: 4px; flex-wrap: wrap; margin-left: 16px; }
+.topbar nav a { color: var(--muted); padding: 4px 10px; border-radius: 6px; font-size: 13px; }
+.topbar nav a:hover { background: var(--subtle); color: var(--fg); text-decoration: none; }
+.theme-btn {
+  margin-left: auto; cursor: pointer;
+  background: var(--subtle); color: var(--fg);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 4px 12px; font-size: 13px;
+}
+main { max-width: 1400px; margin: 0 auto; padding: 32px; }
+.section { margin-bottom: 56px; scroll-margin-top: 72px; }
+.section > h2 {
+  font-size: 20px; margin: 0 0 4px; display: flex; align-items: center; gap: 8px;
+}
+.section > p { margin: 0 0 20px; color: var(--muted); }
+.showcase { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+.size-tag {
+  font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 8px;
+}
+.size-col { display: flex; flex-direction: column; gap: 16px; }
+
+/* ==========================================================
+   Card base
+   ========================================================== */
+.gh-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  color: var(--fg);
+}
+.gh-card--l { width: 640px; max-width: 100%; }
+.gh-card--m { width: 420px; max-width: 100%; }
+.gh-card--s { width: 340px; max-width: 100%; border-radius: 10px; }
+
+.gh-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-muted);
+  background: var(--subtle);
+  font-size: 13px; color: var(--muted);
+}
+.gh-head .repo { color: var(--fg); font-weight: 600; }
+.gh-head .repo b { font-weight: 600; }
+.gh-head .logo { margin-left: auto; color: var(--fg); opacity: .8; }
+.gh-body { padding: 16px; }
+.gh-foot {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border-muted);
+  font-size: 12px; color: var(--muted);
+}
+.gh-foot .right { margin-left: auto; }
+
+/* small card layout */
+.gh-card--s .s-wrap { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.gh-card--s .s-main { min-width: 0; flex: 1; }
+.gh-card--s .s-title { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gh-card--s .s-sub { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ==========================================================
+   Atoms
+   ========================================================== */
+.ic { width: 16px; height: 16px; fill: currentColor; flex: none; vertical-align: text-bottom; }
+.ic-12 { width: 12px; height: 12px; }
+.ic-20 { width: 20px; height: 20px; }
+.ic-24 { width: 24px; height: 24px; }
+.row { display: flex; align-items: center; gap: 8px; }
+.wrap { flex-wrap: wrap; }
+.muted { color: var(--muted); }
+.fg { color: var(--fg); }
+.sm { font-size: 12px; }
+.bold { font-weight: 600; }
+.ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.sep { width: 3px; height: 3px; border-radius: 50%; background: var(--muted); opacity: .6; flex: none; }
+.hr { height: 1px; background: var(--border-muted); margin: 16px 0; border: 0; }
+
+.title-l { font-size: 22px; font-weight: 600; line-height: 1.3; margin: 0; }
+.title-m { font-size: 16px; font-weight: 600; line-height: 1.35; margin: 0; }
+.num { color: var(--muted); font-weight: 400; }
+
+/* avatar: gradient fallback + optional <img> */
+.avatar {
+  position: relative; display: inline-flex; flex: none;
+  align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: linear-gradient(135deg, #a5b4fc, #f0abfc);
+  overflow: hidden; color: #fff; font-size: 10px; font-weight: 700;
+  box-shadow: 0 0 0 1px var(--border-muted);
+}
+.avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.avatar.sq { border-radius: 22%; }
+.av-16 { width: 16px; height: 16px; }
+.av-24 { width: 24px; height: 24px; }
+.av-32 { width: 32px; height: 32px; font-size: 12px; }
+.av-40 { width: 40px; height: 40px; font-size: 14px; }
+.av-56 { width: 56px; height: 56px; font-size: 18px; }
+.av-72 { width: 72px; height: 72px; font-size: 22px; }
+.av-96 { width: 96px; height: 96px; font-size: 28px; }
+.g2 { background: linear-gradient(135deg, #6ee7b7, #3b82f6); }
+.g3 { background: linear-gradient(135deg, #fcd34d, #f97316); }
+.g4 { background: linear-gradient(135deg, #f9a8d4, #ef4444); }
+.g5 { background: linear-gradient(135deg, #c4b5fd, #6366f1); }
+.stack { display: inline-flex; }
+.stack .avatar { box-shadow: 0 0 0 2px var(--card); }
+.stack .avatar + .avatar { margin-left: -6px; }
+
+/* state badges */
+.state {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 12px; border-radius: 999px;
+  font-size: 13px; font-weight: 500; color: #fff; line-height: 20px;
+}
+.state.sm-state { padding: 0 8px; font-size: 12px; }
+.state.open   { background: #1f883d; }
+.state.merged { background: #8250df; }
+.state.closed { background: #cf222e; }
+.state.draft  { background: #6e7781; }
+.state.done   { background: #8250df; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 0 8px; border-radius: 999px; line-height: 20px;
+  font-size: 12px; font-weight: 500;
+  border: 1px solid var(--border); color: var(--muted);
+  white-space: nowrap;
+}
+.badge.green { color: var(--green); border-color: currentColor; }
+.badge.purple { color: var(--purple); border-color: currentColor; }
+.badge.solid-green { background: var(--green-bg); color: var(--green); border-color: transparent; }
+
+.label {
+  --c: 9,105,218;
+  display: inline-flex; align-items: center;
+  padding: 0 8px; border-radius: 999px; line-height: 20px;
+  font-size: 12px; font-weight: 500;
+  color: rgb(var(--c));
+  background: rgba(var(--c), .12);
+  border: 1px solid rgba(var(--c), .35);
+  white-space: nowrap;
+}
+
+.chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 1px 6px; border-radius: 6px;
+  background: var(--subtle); border: 1px solid var(--border-muted);
+  font-size: 12px; color: var(--fg);
+}
+.chip.accent { color: var(--accent); background: rgba(9,105,218,.08); border-color: rgba(9,105,218,.2); }
+
+.icon-bubble {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--subtle); color: var(--muted);
+  border: 1px solid var(--border-muted);
+}
+.icon-bubble.green { color: var(--green); background: var(--green-bg); border-color: transparent; }
+.icon-bubble.purple { color: var(--purple); background: var(--purple-bg); border-color: transparent; }
+.icon-bubble.red { color: var(--red); background: var(--red-bg); border-color: transparent; }
+
+.add { color: var(--green); font-weight: 600; }
+.del { color: var(--red); font-weight: 600; }
+.diffbar { display: inline-flex; gap: 2px; }
+.diffbar i { width: 8px; height: 8px; border-radius: 2px; background: var(--border); display: block; }
+.diffbar i.a { background: var(--green); }
+.diffbar i.d { background: var(--red); }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 12px; border-radius: 6px;
+  background: var(--subtle); border: 1px solid var(--border);
+  color: var(--fg); font-size: 12px; font-weight: 500; cursor: pointer;
+  font-family: inherit;
+}
+.btn.primary { background: #1f883d; color: #fff; border-color: rgba(31,35,40,.15); }
+
+.stat-grid { display: grid; gap: 1px; background: var(--border-muted); border: 1px solid var(--border-muted); border-radius: 8px; overflow: hidden; }
+.stat-grid > div { background: var(--card); padding: 10px 12px; }
+.stat-grid .v { font-size: 18px; font-weight: 600; }
+.stat-grid .k { font-size: 12px; color: var(--muted); }
+.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+.list { border: 1px solid var(--border-muted); border-radius: 8px; overflow: hidden; }
+.list > div { display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 13px; }
+.list > div + div { border-top: 1px solid var(--border-muted); }
+.list .grow { flex: 1; min-width: 0; }
+
+.notes { margin: 0; padding-left: 20px; color: var(--fg); }
+.notes li { margin: 2px 0; }
+.notes li::marker { color: var(--muted); }
+
+.section-label { font-size: 12px; font-weight: 600; color: var(--muted); margin: 0 0 8px; text-transform: uppercase; letter-spacing: .04em; }
+
+.progress { height: 8px; border-radius: 999px; background: var(--border-muted); overflow: hidden; }
+.progress > span { display: block; height: 100%; background: var(--green); border-radius: inherit; }
+.langbar { display: flex; height: 8px; border-radius: 999px; overflow: hidden; gap: 2px; }
+.langbar span { display: block; height: 100%; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+
+.banner { height: 96px; background: linear-gradient(120deg, #0969da 0%, #8250df 55%, #bf3989 100%); position: relative; }
+.banner.org { background: linear-gradient(120deg, #1f883d 0%, #0969da 100%); }
+.banner::after { content: ""; position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,.18) 1px, transparent 1px); background-size: 14px 14px; }
+.profile-top { display: flex; align-items: flex-end; gap: 16px; margin-top: -48px; position: relative; z-index: 1; }
+.profile-top .avatar { box-shadow: 0 0 0 4px var(--card); }
+
+.pinned { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pinned > div { border: 1px solid var(--border-muted); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+
+.heatmap { display: grid; grid-template-rows: repeat(7, 9px); grid-auto-flow: column; grid-auto-columns: 9px; gap: 2px; }
+.heatmap i { border-radius: 2px; background: var(--heat-0); display: block; }
+.heatmap i[data-l="1"] { background: var(--heat-1); }
+.heatmap i[data-l="2"] { background: var(--heat-2); }
+.heatmap i[data-l="3"] { background: var(--heat-3); }
+.heatmap i[data-l="4"] { background: var(--heat-4); }
+
+.check-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; background: var(--subtle); font-size: 13px; }
+.ok { color: var(--green); }
+.verified { color: var(--green); }
+.kv { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.kv .row span { color: var(--fg); }
+.reactions { display: flex; gap: 6px; flex-wrap: wrap; }
+.reactions span { padding: 0 8px; border: 1px solid var(--border-muted); border-radius: 999px; font-size: 12px; line-height: 22px; background: var(--subtle); }
+.commit-msg pre { margin: 8px 0 0; white-space: pre-wrap; font-size: 12.5px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ==========================================================
+     SVG Sprite (GitHub Octicons, MIT)
+     ========================================================== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-github" viewBox="0 0 16 16"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51.96-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.37A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></symbol>
+  <symbol id="i-repo" viewBox="0 0 16 16"><path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.495 2.495 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.708A2.486 2.486 0 0 1 4.5 9h8ZM5 12.250a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.087a.249.249 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2Z"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 16 16"><path d="M1 7.775V2.75C1 1.784 1.784 1 2.75 1h5.025c.464 0 .91.184 1.238.513l6.25 6.25a1.75 1.75 0 0 1 0 2.474l-5.026 5.026a1.75 1.75 0 0 1-2.474 0l-6.25-6.25A1.752 1.752 0 0 1 1 7.775Zm1.5 0c0 .066.026.13.073.177l6.25 6.25a.25.25 0 0 0 .354 0l5.025-5.025a.25.25 0 0 0 0-.354l-6.25-6.25a.25.25 0 0 0-.177-.073H2.75a.25.25 0 0 0-.25.25ZM6 5a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></symbol>
+  <symbol id="i-commit" viewBox="0 0 16 16"><path d="M11.93 8.5a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5Zm-1.43-.75a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Z"/></symbol>
+  <symbol id="i-pr" viewBox="0 0 16 16"><path d="M1.5 3.25a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.25 2.25 0 0 1 1.5 3.25Zm5.677-.177L9.573.677A.25.25 0 0 1 10 .854V2.5h1A2.5 2.5 0 0 1 13.5 5v5.628a2.251 2.251 0 1 1-1.5 0V5a1 1 0 0 0-1-1h-1v1.646a.25.25 0 0 1-.427.177L7.177 3.427a.25.25 0 0 1 0-.354ZM3.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm0 9.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm8.25.75a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Z"/></symbol>
+  <symbol id="i-merge" viewBox="0 0 16 16"><path d="M5.45 5.154A4.25 4.25 0 0 0 9.25 7.5h1.378a2.251 2.251 0 1 1 0 1.5H9.25A5.734 5.734 0 0 1 5 7.123v3.505a2.25 2.25 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.95-.218ZM4.25 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm8.5-4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM5 3.25a.75.75 0 1 0 0 .005V3.25Z"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 16 16"><path d="M9.5 3.25a2.25 2.25 0 1 1 3 2.122V6A2.5 2.5 0 0 1 10 8.5H6a1 1 0 0 0-1 1v1.128a2.251 2.251 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.5 0v1.836A2.493 2.493 0 0 1 6 7h4a1 1 0 0 0 1-1v-.628A2.25 2.25 0 0 1 9.5 3.25Zm-6 0a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Zm8.25-.75a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5ZM4.25 12a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z"/></symbol>
+  <symbol id="i-issue" viewBox="0 0 16 16"><path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Z"/></symbol>
+  <symbol id="i-star" viewBox="0 0 16 16"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Zm0 2.445L6.615 5.5a.75.75 0 0 1-.564.41l-3.097.45 2.24 2.184a.75.75 0 0 1 .216.664l-.528 3.084 2.769-1.456a.75.75 0 0 1 .698 0l2.77 1.456-.53-3.084a.75.75 0 0 1 .216-.664l2.24-2.183-3.096-.45a.75.75 0 0 1-.564-.41L8 2.694Z"/></symbol>
+  <symbol id="i-fork" viewBox="0 0 16 16"><path d="M5 5.372v.878c0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75v-.878a2.25 2.25 0 1 1 1.5 0v.878a2.25 2.25 0 0 1-2.25 2.25h-1.5v2.128a2.251 2.251 0 1 1-1.5 0V8.5h-1.5A2.25 2.25 0 0 1 3.5 6.250v-.878a2.25 2.25 0 1 1 1.5 0ZM5 3.25a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Zm6.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm-3 8.75a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Z"/></symbol>
+  <symbol id="i-people" viewBox="0 0 16 16"><path d="M2 5.5a3.5 3.5 0 1 1 5.898 2.549 5.508 5.508 0 0 1 3.034 4.084.75.75 0 1 1-1.482.235 4 4 0 0 0-7.9 0 .75.75 0 0 1-1.482-.236A5.507 5.507 0 0 1 3.102 8.05 3.493 3.493 0 0 1 2 5.5ZM11 4a3.001 3.001 0 0 1 2.22 5.018 5.01 5.01 0 0 1 2.56 3.012.749.749 0 0 1-.885.954.752.752 0 0 1-.549-.514 3.507 3.507 0 0 0-2.522-2.372.75.75 0 0 1-.574-.73v-.352a.75.75 0 0 1 .416-.672A1.5 1.5 0 0 0 11 5.5.75.75 0 0 1 11 4Zm-5.5-.5a2 2 0 1 0-.001 3.999A2 2 0 0 0 5.5 3.5Z"/></symbol>
+  <symbol id="i-org" viewBox="0 0 16 16"><path d="M1.75 16A1.75 1.75 0 0 1 0 14.25V1.75C0 .784.784 0 1.75 0h8.5C11.216 0 12 .784 12 1.75v12.5c0 .085-.006.168-.018.25h2.268a.25.25 0 0 0 .25-.25V8.285a.25.25 0 0 0-.111-.208l-1.055-.703a.749.749 0 1 1 .832-1.248l1.055.703c.487.325.779.871.779 1.456v5.965A1.75 1.75 0 0 1 14.25 16h-3.5a.766.766 0 0 1-.197-.026c-.099.017-.2.026-.303.026h-3a.75.75 0 0 1-.75-.75V14h-1v1.25a.75.75 0 0 1-.75.75Zm-.25-1.75c0 .138.112.25.25.25H4v-1.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 .75.75v1.25h2.25a.25.25 0 0 0 .25-.25V1.75a.25.25 0 0 0-.25-.25h-8.5a.25.25 0 0 0-.25.25ZM3.75 6h.5a.75.75 0 0 1 0 1.5h-.5a.75.75 0 0 1 0-1.5ZM3 3.75A.75.75 0 0 1 3.75 3h.5a.75.75 0 0 1 0 1.5h-.5A.75.75 0 0 1 3 3.75Zm4 3A.75.75 0 0 1 7.75 6h.5a.75.75 0 0 1 0 1.5h-.5A.75.75 0 0 1 7 6.75ZM7.75 3h.5a.75.75 0 0 1 0 1.5h-.5a.75.75 0 0 1 0-1.5ZM3 9.75A.75.75 0 0 1 3.75 9h.5a.75.75 0 0 1 0 1.5h-.5A.75.75 0 0 1 3 9.75ZM7.75 9h.5a.75.75 0 0 1 0 1.5h-.5a.75.75 0 0 1 0-1.5Z"/></symbol>
+  <symbol id="i-location" viewBox="0 0 16 16"><path d="m12.596 11.596-3.535 3.536a1.5 1.5 0 0 1-2.122 0l-3.535-3.536a6.5 6.5 0 1 1 9.192-9.193 6.5 6.5 0 0 1 0 9.193Zm-1.06-8.132v-.001a5 5 0 1 0-7.072 7.072L8 14.07l3.536-3.534a5 5 0 0 0 0-7.072ZM8 9a2 2 0 1 1-.001-3.999A2 2 0 0 1 8 9Z"/></symbol>
+  <symbol id="i-link" viewBox="0 0 16 16"><path d="m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 16 16"><path d="M1.75 2h12.5c.966 0 1.75.784 1.75 1.75v8.5A1.75 1.75 0 0 1 14.25 14H1.75A1.75 1.75 0 0 1 0 12.25v-8.5C0 2.784.784 2 1.75 2ZM1.5 12.251c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V5.809L8.38 9.397a.75.75 0 0 1-.76 0L1.5 5.809v6.442Zm13-8.181v-.32a.25.25 0 0 0-.25-.25H1.75a.25.25 0 0 0-.25.25v.32L8 7.88Z"/></symbol>
+  <symbol id="i-comment" viewBox="0 0 16 16"><path d="M1 2.75C1 1.784 1.784 1 2.75 1h10.5c.966 0 1.75.784 1.75 1.75v7.5A1.75 1.75 0 0 1 13.25 12H9.06l-2.573 2.573A1.458 1.458 0 0 1 4 13.543V12H2.75A1.75 1.75 0 0 1 1 10.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h4.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"/></symbol>
+  <symbol id="i-check-circle" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 1 8 0a8 8 0 0 1 0 16Zm3.78-9.72a.751.751 0 0 0-.018-1.042.751.751 0 0 0-1.042-.018L6.75 9.19 5.28 7.72a.751.751 0 0 0-1.042.018.751.751 0 0 0-.018 1.042l2 2a.75.75 0 0 0 1.06 0Z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 0 1-.557 1.392l-2.5-1A.751.751 0 0 1 7 8.25v-3.5a.75.75 0 0 1 1.5 0Z"/></symbol>
+  <symbol id="i-package" viewBox="0 0 16 16"><path d="m8.878.392 5.25 3.045c.54.314.872.89.872 1.514v6.098a1.75 1.75 0 0 1-.872 1.514l-5.25 3.045a1.75 1.75 0 0 1-1.756 0l-5.25-3.045A1.75 1.75 0 0 1 1 11.049V4.951c0-.624.332-1.201.872-1.514L7.122.392a1.75 1.75 0 0 1 1.756 0ZM7.875 1.69l-4.63 2.685L8 7.133l4.755-2.758-4.63-2.685a.248.248 0 0 0-.25 0ZM2.5 5.677v5.372c0 .09.047.171.125.216l4.625 2.683V8.432Zm6.25 8.271 4.625-2.683a.25.25 0 0 0 .125-.216V5.677L8.75 8.432Z"/></symbol>
+  <symbol id="i-file" viewBox="0 0 16 16"><path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z"/></symbol>
+  <symbol id="i-download" viewBox="0 0 16 16"><path d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14Z"/><path d="M7.25 7.689V2a.75.75 0 0 1 1.5 0v5.689l1.97-1.969a.749.749 0 1 1 1.06 1.06l-3.25 3.25a.749.749 0 0 1-1.06 0L4.22 6.78a.749.749 0 1 1 1.06-1.06l1.97 1.969Z"/></symbol>
+  <symbol id="i-milestone" viewBox="0 0 16 16"><path d="M7.75 0a.75.75 0 0 1 .75.75V3h3.634c.414 0 .814.147 1.13.414l2.07 1.75a1.75 1.75 0 0 1 0 2.672l-2.07 1.75a1.75 1.75 0 0 1-1.13.414H8.5v5.25a.75.75 0 0 1-1.5 0V10H2.75A1.75 1.75 0 0 1 1 8.25v-3.5C1 3.784 1.784 3 2.75 3H7V.75A.75.75 0 0 1 7.75 0Zm4.384 8.5a.25.25 0 0 0 .161-.06l2.07-1.75a.248.248 0 0 0 0-.38l-2.07-1.75a.25.25 0 0 0-.161-.06H2.75a.25.25 0 0 0-.25.25v3.5c0 .138.112.25.25.25h9.384Z"/></symbol>
+  <symbol id="i-verified" viewBox="0 0 16 16"><path d="m9.585.52.929.68c.153.112.331.186.518.215l1.138.175a2.678 2.678 0 0 1 2.24 2.24l.174 1.139c.029.187.103.365.215.518l.68.928a2.677 2.677 0 0 1 0 3.17l-.68.928a1.174 1.174 0 0 0-.215.518l-.175 1.138a2.678 2.678 0 0 1-2.241 2.241l-1.138.175a1.17 1.17 0 0 0-.518.215l-.928.68a2.677 2.677 0 0 1-3.17 0l-.928-.68a1.174 1.174 0 0 0-.518-.215L3.83 14.41a2.678 2.678 0 0 1-2.24-2.24l-.175-1.138a1.17 1.17 0 0 0-.215-.518l-.68-.928a2.677 2.677 0 0 1 0-3.17l.68-.928c.112-.153.186-.331.215-.518l.175-1.14a2.678 2.678 0 0 1 2.24-2.24l1.139-.175c.187-.029.365-.103.518-.215l.928-.68a2.677 2.677 0 0 1 3.17 0ZM7.303 1.728l-.927.68a2.67 2.67 0 0 1-1.18.489l-1.137.174a1.179 1.179 0 0 0-.987.987l-.174 1.136a2.677 2.677 0 0 1-.489 1.18l-.68.928a1.18 1.18 0 0 0 0 1.394l.68.927c.256.348.424.753.489 1.18l.174 1.137c.078.509.478.909.987.987l1.136.174a2.67 2.67 0 0 1 1.18.489l.928.68c.414.305.979.305 1.394 0l.927-.68a2.67 2.67 0 0 1 1.18-.489l1.137-.174a1.18 1.18 0 0 0 .987-.987l.174-1.136a2.67 2.67 0 0 1 .489-1.18l.68-.928a1.176 1.176 0 0 0 0-1.394l-.68-.927a2.686 2.686 0 0 1-.489-1.18l-.174-1.137a1.179 1.179 0 0 0-.987-.987l-1.136-.174a2.677 2.677 0 0 1-1.18-.489l-.928-.68a1.176 1.176 0 0 0-1.394 0ZM11.28 6.78l-3.75 3.75a.75.75 0 0 1-1.06 0L4.72 8.78a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018l1.22 1.22 3.22-3.22a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042Z"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 16 16"><path d="M4.75 0a.75.75 0 0 1 .75.75V2h5V.75a.75.75 0 0 1 1.5 0V2h1.25c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 13.25 16H2.75A1.75 1.75 0 0 1 1 14.25V3.75C1 2.784 1.784 2 2.75 2H4V.75A.75.75 0 0 1 4.75 0ZM2.5 7.5v6.75c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25V7.5Zm10.75-4H2.75a.25.25 0 0 0-.25.25V6h11V3.75a.25.25 0 0 0-.25-.25Z"/></symbol>
+</svg>
+
+<header class="topbar">
+  <h1><svg class="ic ic-24"><use href="#i-github"/></svg> GitHub Cards</h1>
+  <nav>
+    <a href="#release">Release</a>
+    <a href="#commit">Commit</a>
+    <a href="#pr">Pull Request</a>
+    <a href="#issue">Issue</a>
+    <a href="#user">User</a>
+    <a href="#org">Organization</a>
+  </nav>
+  <button class="theme-btn" onclick="toggleTheme()">🌓 切换主题</button>
+</header>
+
+<main>
+
+<!-- ==========================================================
+     1. RELEASE
+     ========================================================== -->
+<section class="section" id="release">
+  <h2><svg class="ic ic-20"><use href="#i-tag"/></svg> Release</h2>
+  <p>版本发布卡片 · 大 / 中 / 小</p>
+  <div class="showcase">
+
+    <!-- Release · Large -->
+    <div>
+      <div class="size-tag">Large · 640px</div>
+      <article class="gh-card gh-card--l">
+        <div class="gh-head">
+          <svg class="ic"><use href="#i-repo"/></svg>
+          <span class="repo">{{owner}} / <b>{{repo}}</b></span>
+          <svg class="ic ic-20 logo"><use href="#i-github"/></svg>
+        </div>
+        <div class="gh-body">
+          <div class="row wrap" style="margin-bottom:8px">
+            <h3 class="title-l">{{release_name}}</h3>
+            <span class="badge green">Latest</span>
+            <span class="badge">{{prerelease_flag}}</span>
+          </div>
+          <div class="row wrap muted sm" style="margin-bottom:16px">
+            <span class="avatar av-20"><img src="{{author_avatar_url}}" alt="" onerror="this.remove()"></span>
+            <span><b class="fg">{{author_login}}</b> released this {{published_at}}</span>
+            <span class="sep"></span>
+            <span class="chip"><svg class="ic ic-12"><use href="#i-tag"/></svg>{{tag_name}}</span>
+            <span class="chip mono"><svg class="ic ic-12"><use href="#i-commit"/></svg>{{target_commit_sha}}</span>
+            <span class="chip"><svg class="ic ic-12"><use href="#i-branch"/></svg>{{target_branch}}</span>
+          </div>
+
+          <div class="section-label">What's Changed</div>
+          <ul class="notes">
+            <li>{{release_note_1}} by <a href="#">@{{contributor_1}}</a> in <a href="#">#{{pr_number_1}}</a></li>
+            <li>{{release_note_2}} by <a href="#">@{{contributor_2}}</a> in <a href="#">#{{pr_number_2}}</a></li>
+            <li>{{release_note_3}} by <a href="#">@{{contributor_3}}</a> in <a href="#">#{{pr_number_3}}</a></li>
+          </ul>
+          <p class="sm muted" style="margin:8px 0 0">Full Changelog: <a href="#" class="mono">{{previous_tag}}...{{tag_name}}</a></p>
+
+          <div class="hr"></div>
+          <div class="row" style="margin-bottom:8px">
+            <div class="section-label" style="margin:0">Assets</div>
+            <span class="badge">{{assets_count}}</span>
+          </div>
+          <div class="list">
+            <div><svg class="ic muted"><use href="#i-package"/></svg><a class="grow ellipsis bold" href="#">{{asset_name_1}}</a><span class="muted sm">{{asset_size_1}}</span><span class="muted sm row"><svg class="ic ic-12"><use href="#i-download"/></svg>{{asset_downloads_1}}</span></div>
+            <div><svg class="ic muted"><use href="#i-package"/></svg><a class="grow ellipsis bold" href="#">{{asset_name_2}}</a><span class="muted sm">{{asset_size_2}}</span><span class="muted sm row"><svg class="ic ic-12"><use href="#i-download"/></svg>{{asset_downloads_2}}</span></div>
+            <div><svg class="ic muted"><use href="#i-file"/></svg><a class="grow ellipsis bold" href="#">Source code (zip)</a><span class="muted sm">{{published_date}}</span></div>
+          </div>
+        </div>
+        <div class="gh-foot">
+          <div class="reactions"><span>👍 {{reaction_thumbs_up}}</span><span>🎉 {{reaction_hooray}}</span><span>🚀 {{reaction_rocket}}</span><span>❤️ {{reaction_heart}}</span></div>
+          <span class="right row"><svg class="ic ic-12"><use href="#i-people"/></svg>{{contributors_count}} contributors</span>
+        </div>
+      </article>
+    </div>
+
+    <div class="size-col">
+      <!-- Release · Medium -->
+      <div>
+        <div class="size-tag">Medium · 420px</div>
+        <article class="gh-card gh-card--m">
+          <div class="gh-head">
+            <svg class="ic"><use href="#i-repo"/></svg>
+            <span class="repo ellipsis">{{owner}} / <b>{{repo}}</b></span>
+            <svg class="ic logo"><use href="#i-github"/></svg>
+          </div>
+          <div class="gh-body">
+            <div class="row" style="margin-bottom:6px">
+              <h3 class="title-m ellipsis">{{release_name}}</h3>
+              <span class="badge green">Latest</span>
+            </div>
+            <div class="row wrap muted sm" style="margin-bottom:10px">
+              <span class="chip"><svg class="ic ic-12"><use href="#i-tag"/></svg>{{tag_name}}</span>
+              <span class="avatar av-16"><img src="{{author_avatar_url}}" alt="" onerror="this.remove()"></span>
+              <span>{{author_login}}</span><span class="sep"></span><span>{{published_at}}</span>
+            </div>
+            <p class="clamp-3 muted" style="margin:0">{{release_body_excerpt}}</p>
+          </div>
+          <div class="gh-foot">
+            <span class="row"><svg class="ic ic-12"><use href="#i-package"/></svg>{{assets_count}} assets</span>
+            <span class="row"><svg class="ic ic-12"><use href="#i-download"/></svg>{{total_downloads}}</span>
+            <span class="row"><svg class="ic ic-12"><use href="#i-commit"/></svg>{{commits_since_prev}} commits</span>
+          </div>
+        </article>
+      </div>
+
+      <!-- Release · Small -->
+      <div>
+        <div class="size-tag">Small · 340px</div>
+        <article class="gh-card gh-card--s">
+          <div class="s-wrap">
+            <span class="icon-bubble green"><svg class="ic"><use href="#i-tag"/></svg></span>
+            <div class="s-main">
+              <div class="s-title">{{repo}} <span class="mono">{{tag_name}}</span></div>
+              <div class="s-sub">{{owner}} · released {{published_at}}</div>
+            </div>
+            <span class="badge green">Latest</span>
+          </div>
+        </article>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ==========================================================
+     2. COMMIT
+     ========================================================== -->
+<section class="section" id="commit">
+  <h2><svg class="ic ic-20"><use href="#i-commit"/></svg> Commit</h2>
+  <p>提交卡片 · 大 / 中 / 小</p>
+  <div class="showcase">
+
+    <!-- Commit · Large -->
+    <div>
+      <div class="size-tag">Large · 640px</div>
+      <article class="gh-card gh-card--l">
+        <div class="gh-head">
+          <svg class="ic"><use href="#i-repo"/></svg>
+          <span class="repo">{{owner}} / <b>{{repo}}</b></span>
+          <span class="chip" style="margin-left:8px"><svg class="ic ic-12"><use href="#i-branch"/></svg>{{branch}}</span>
+          <svg class="ic ic-20 logo"><use href="#i-github"/></svg>
+        </div>
+        <div class="gh-body">
+          <div class="commit-msg">
+            <h3 class="title-m" style="font-size:18px">{{commit_message_title}}</h3>
+            <pre>{{commit_message_body}}</pre>
+          </div>
+          <div class="row wrap" style="margin-top:14px">
+            <span class="stack">
+              <span class="avatar av-24"><img src="{{author_avatar_url}}" alt="" onerror="this.remove()"></span>
+              <span class="avatar av-24 g2"><img src="{{coauthor_avatar_url}}" alt="" onerror="this.remove()"></span>
+            </span>
+            <span class="sm"><b>{{author_login}}</b> <span class="muted">and</span> <b>{{coauthor_login}}</b> <span class="muted">committed {{committed_at}}</span></span>
+            <span class="badge green" style="margin-left:auto"><svg class="ic ic-12"><use href="#i-verified"/></svg>Verified</span>
+          </div>
+
+          <div class="hr"></div>
+          <div class="row wrap sm" style="gap:16px">
+            <span class="muted">commit <code class="fg">{{commit_sha_full}}</code></span>
+            <span class="muted">parent <a class="mono" href="#">{{parent_sha_short}}</a></span>
+          </div>
+
+          <div class="row" style="margin:16px 0 8px">
+            <span class="sm"><b>{{files_changed}}</b> <span class="muted">files changed</span></span>
+            <span class="sm add">+{{additions}}</span>
+            <span class="sm del">−{{deletions}}</span>
+            <span class="diffbar" style="margin-left:auto"><i class="a"></i><i class="a"></i><i class="a"></i><i class="d"></i><i></i></span>
+          </div>
+          <div class="list">
+            <div><svg class="ic muted"><use href="#i-file"/></svg><span class="grow ellipsis mono">{{file_path_1}}</span><span class="add sm">+{{file_add_1}}</span><span class="del sm">−{{file_del_1}}</span></div>
+            <div><svg class="ic muted"><use href="#i-file"/></svg><span class="grow ellipsis mono">{{file_path_2}}</span><span class="add sm">+{{file_add_2}}</span><span class="del sm">−{{file_del_2}}</span></div>
+            <div><svg class="ic muted"><use href="#i-file"/></svg><span class="grow ellipsis mono">{{file_path_3}}</span><span class="add sm">+{{file_add_3}}</span><span class="del sm">−{{file_del_3}}</span></div>
+          </div>
+        </div>
+        <div class="gh-foot">
+          <span class="row ok"><svg class="ic ic-12"><use href="#i-check-circle"/></svg>{{checks_passed}} / {{checks_total}} checks passed</span>
+          <span class="row"><svg class="ic ic-12"><use href="#i-comment"/></svg>{{comments_count}} comments</span>
+          <span class="right row"><svg class="ic ic-12"><use href="#i-tag"/></svg>{{contained_in_tag}}</span>
+        </div>
+      </article>
+    </div>
+
+    <div class="size-col">
+      <!-- Commit · Medium -->
+      <div>
+        <div class="size-tag">Medium · 420px</div>
+        <article class="gh-card gh-card--m">
+          <div class="gh-head">
+            <svg class="ic"><use href="#i-repo"/></svg>
+            <span class="repo ellipsis">{{owner}} / <b>{{repo}}</b></span>
+            <svg class="ic logo"><use href="#i-github"/></svg>
+          </div>
+          <div class="gh-body">
+            <h3 class="title-m clamp-2" style="margin-bottom:10px">{{commit_message_title}}</h3>
+            <div class="row sm">
+              <span class="avatar av-20"><img src="{{author_avatar_url}}" alt="" onerror="this.remove()"></span>
+              <b>{{author_login}}</b><span class="muted">committed {{committed_at}}</span>
+              <svg class="ic ic-12 verified" style="margin-left:auto"><use href="#i-verified"/></svg>
+            </div>
+          </div>
+          <div class="gh-foot">
+            <span class="chip accent mono">{{commit_sha_short}}</span>
+            <span><b class="fg">{{files_changed}}</b> files</span>
+            <span class="add">+{{additions}}</span><span class="del">−{{deletions}}</span>
+            <span class="diffbar right"><i class="a"></i><i class="a"></i><i class="a"></i><i class="d"></i><i></i></span>
+          </div>
+        </article>
+      </div>
+
+      <!-- Commit · Small -->
+      <div>
+        <div class="size-tag">Small · 340px</div>
+        <article class="gh-card gh-card--s">
+          <div class="s-wrap">
+            <span class="avatar av-32"><img src="{{author_avatar_url}}" alt="" onerror="this.remove()"></span>
+            <div class="s-main">
+              <div class="s-title">{{commit_message_title}}</div>
+              <div class="s-sub">{{author_login}} · {{committed_at}}</div>
+            </div>
+            <span class="chip accent mono">{{commit_sha_short}}</span>
+          </div>
+        </article>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ==========================================================
+     3. PULL REQUEST
+     ========================================================== -->
+<section class="section" id="pr">
+  <h2><svg class="ic ic-20"><use href="#i-pr"/></svg> Pull Request</h2>
+  <p>拉取请求卡片 · 大 / 中 / 小（状态类：<code>open</code> / <code>merged</code> / <code>closed</code> / <code>draft</code>）</p>
+  <div class="showcase">
+
+    <!-- PR · Large -->
+    <div>
+      <div class="size-tag">Large · 640px</div>
+      <article class="gh-card gh-card--l">
+        <div class="gh-head">
+          <svg class="ic"><use href="#i-repo"/></svg>
+          <span class="repo">{{owner}} / <b>{{repo}}</b></span>
+          <svg class="ic ic-20 logo"><use href="#i-github"/></svg>
+        </div>
+        <div class="gh-body">
+          <h3 class="title-l" style="margin-bottom:10px">{{pr_title}} <span class="num">#{{pr_number}}</span></h3>
+          <div class="row wrap sm" style="margin-bottom:14px">
+            <span class="state open"><svg class="ic"><use href="#i-pr"/></svg>{{pr_state}}</span>
+            <span class="muted"><b class="fg">{{author_login}}</b> wants to merge {{commits_count}} commits into</span>
+            <span class="chip accent mono">{{base_branch}}</span>
+            <span class="muted">from</span>
+            <span class="chip accent mono">{{head_branch}}</span>
+          </div>
+          <div class="row wrap" style="gap:6px;margin-bottom:14px">
+            <span class="label" style="--c:215,58,74">{{label_1}}</span>
+            <span class="label" style="--c:130,80,223">{{label_2}}</span>
+            <span class="label" style="--c:26,127,55">{{label_3}}</span>
+          </div>
+          <p class="clamp-3" style="margin:0 0 16px">{{pr_body_excerpt}}</p>
+
+          <div class="check-row" style="margin-bottom:8px">
+            <svg class="ic ok"><use href="#i-check-circle"/></svg>
+            <span><b>All checks have passed</b> <span class="muted">· {{checks_passed}} successful checks</span></span>
+          </div>
+          <div class="check-row">
+            <svg class="ic ok"><use href="#i-check"/></svg>
+            <span><b>{{approvals_count}} approvals</b> <span class="muted">· No conflicts with base branch</span></span>
+            <span class="stack" style="margin-left:auto">
+              <span class="avatar av-20 g2"><img src="{{reviewer_avatar_1}}" alt="" onerror="this.remove()"></span>
+              <span class="avatar av-20 g3"><img src="{{reviewer_avatar_2}}" alt="" onerror="this.remove()"></span>
+              <span class="avatar av-20 g5"><img src="{{reviewer_avatar_3}}" alt="" onerror="this.remove()"></span>
+            </span>
+          </div>
+
+          <div class="stat-grid cols-4" style="margin-top:16px">
+            <div><div class="v">{{comments_count}}</div><div class="k">Conversation</div></div>
+            <div><div class="v">{{commits_count}}</div><div class="k">Commits</div></div>
+            <div><div class="v">{{checks_total}}</div><div class="k">Checks</div></div>
+            <div><div class="v">{{files_changed}}</div><div class="k">Files changed</div></div>
+          </div>
+        </div>
+        <div class="gh-foot">
+          <span class="row"><span class="avatar av-16"><img src="{{author_avatar_url}}" alt="" onerror="this.remove()"></span>opened {{created_at}}</span>
+          <span class="row"><svg class="ic ic-12"><use href="#i-milestone"/></svg>{{milestone_title}}</span>
+          <span class="right row"><span class="add">+{{additions}}</span><span class="del">−{{deletions}}</span>
+            <span class="diffbar"><i class="a"></i><i class="a"></i><i class="a"></i><i class="d"></i><i class="d"></i></span></span>
+        </div>
+      </article>
+    </div>
+
+    <div class="size-col">
+      <!-- PR · Medium -->
+      <div>
+        <div class="size-tag">Medium · 420px</div>
+        <article class="gh-card gh-card--m">
+          <div class="gh-head">
+            <svg class="ic"><use href="#i-repo"/></svg>
+            <span class="repo ellipsis">{{owner}} / <b>{{repo}}</b></span>
+            <svg class="ic logo"><use href="#i-github"/></svg>
+          </div>
+          <div class="gh-body">
+            <div class="row" style="align-items:flex-start;gap:10px">
+              <svg class="ic ic-20" style="color:var(--purple);margin-top:2px"><use href="#i-merge"/></svg>
+              <div style="min-width:0">
+                <h3 class="title-m clamp-2">{{pr_title}} <span class="num">#{{pr_number}}</span></h3>
+                <div class="row wrap sm muted" style="margin-top:6px">
+                  <span class="chip accent mono">{{base_branch}}</span>←<span class="chip accent mono">{{head_branch}}</span>
+                </div>
+                <div class="row wrap" style="gap:6px;margin-top:8px">
+                  <span class="label" style="--c:215,58,74">{{label_1}}</span>
+                  <span class="label" style="--c:130,80,223">{{label_2}}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gh-foot">
+            <span class="state merged sm-state"><svg class="ic ic-12"><use href="#i-merge"/></svg>Merged</span>
+            <span class="row"><span class="avatar av-16"><img src="{{author_avatar_url}}" alt="" onerror="this.remove()"></span>{{author_login}}</span>
+            <span class="row"><svg class="ic ic-12"><use href="#i-comment"/></svg>{{comments_count}}</span>
+            <span class="right"><span class="add">+{{additions}}</span> <span class="del">−{{deletions}}</span></span>
+          </div>
+        </article>
+      </div>
+
+      <!-- PR · Small -->
+      <div>
+        <div class="size-tag">Small · 340px</div>
+        <article class="gh-card gh-card--s">
+          <div class="s-wrap">
+            <span class="icon-bubble green"><svg class="ic"><use href="#i-pr"/></svg></span>
+            <div class="s-main">
+              <div class="s-title">{{pr_title}}</div>
+              <div class="s-sub">{{owner}}/{{repo}} <b>#{{pr_number}}</b> · {{author_login}}</div>
+            </div>
+            <span class="state open sm-state">Open</span>
+          </div>
+        </article>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ==========================================================
+     4. ISSUE
+     ========================================================== -->
+<section class="section" id="issue">
+  <h2><svg class="ic ic-20"><use href="#i-issue"/></svg> Issue</h2>
+  <p>议题卡片 · 大 / 中 / 小（状态类：<code>open</code> / <code>done</code> / <code>closed</code>）</p>
+  <div class="showcase">
+
+    <!-- Issue · Large -->
+    <div>
+      <div class="size-tag">Large · 640px</div>
+      <article class="gh-card gh-card--l">
+        <div class="gh-head">
+          <svg class="ic"><use href="#i-repo"/></svg>
+          <span class="repo">{{owner}} / <b>{{repo}}</b></span>
+          <svg class="ic ic-20 logo"><use href="#i-github"/></svg>
+        </div>
+        <div class="gh-body">
+          <h3 class="title-l" style="margin-bottom:10px">{{issue_title}} <span class="num">#{{issue_number}}</span></h3>
+          <div class="row wrap sm" style="margin-bottom:14px">
+            <span class="state open"><svg class="ic"><use href="#i-issue"/></svg>{{issue_state}}</span>
+            <span class="muted"><b class="fg">{{author_login}}</b> opened this issue {{created_at}} · {{comments_count}} comments</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 180px;gap:20px">
+            <div>
+              <div class="row" style="align-items:flex-start;gap:10px">
+                <span class="avatar av-32"><img src="{{author_avatar_url}}" alt="" onerror="this.remove()"></span>
+                <div style="border:1px solid var(--border-muted);border-radius:8px;flex:1;min-width:0">
+                  <div class="sm muted" style="padding:6px 12px;background:var(--subtle);border-bottom:1px solid var(--border-muted)"><b class="fg">{{author_login}}</b> commented {{created_at}}</div>
+                  <p class="clamp-3" style="margin:0;padding:10px 12px">{{issue_body_excerpt}}</p>
+                </div>
+              </div>
+              <div class="reactions" style="margin:10px 0 0 42px"><span>👍 {{reaction_thumbs_up}}</span><span>👀 {{reaction_eyes}}</span><span>❤️ {{reaction_heart}}</span></div>
+            </div>
+            <div class="kv">
+              <div>
+                <div class="section-label">Assignees</div>
+                <div class="row"><span class="avatar av-20 g2"><img src="{{assignee_avatar}}" alt="" onerror="this.remove()"></span><span class="fg">{{assignee_login}}</span></div>
+              </div>
+              <div>
+                <div class="section-label">Labels</div>
+                <div class="row wrap" style="gap:4px">
+                  <span class="label" style="--c:215,58,74">{{label_1}}</span>
+                  <span class="label" style="--c:188,76,0">{{label_2}}</span>
+                </div>
+              </div>
+              <div>
+                <div class="section-label">Milestone</div>
+                <div class="progress" style="margin-bottom:4px"><span style="width:62%"></span></div>
+                <span class="fg">{{milestone_title}}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="gh-foot">
+          <span class="row"><svg class="ic ic-12"><use href="#i-people"/></svg>{{participants_count}} participants</span>
+          <span class="row"><svg class="ic ic-12"><use href="#i-pr"/></svg>Linked: #{{linked_pr_number}}</span>
+          <span class="right row"><svg class="ic ic-12"><use href="#i-clock"/></svg>updated {{updated_at}}</span>
+        </div>
+      </article>
+    </div>
+
+    <div class="size-col">
+      <!-- Issue · Medium -->
+      <div>
+        <div class="size-tag">Medium · 420px</div>
+        <article class="gh-card gh-card--m">
+          <div class="gh-head">
+            <svg class="ic"><use href="#i-repo"/></svg>
+            <span class="repo ellipsis">{{owner}} / <b>{{repo}}</b></span>
+            <svg class="ic logo"><use href="#i-github"/></svg>
+          </div>
+          <div class="gh-body">
+            <div class="row" style="align-items:flex-start;gap:10px">
+              <svg class="ic ic-20 ok" style="margin-top:2px"><use href="#i-issue"/></svg>
+              <div style="min-width:0">
+                <h3 class="title-m clamp-2">{{issue_title}} <span class="num">#{{issue_number}}</span></h3>
+                <p class="clamp-2 muted sm" style="margin:6px 0 8px">{{issue_body_excerpt}}</p>
+                <div class="row wrap" style="gap:6px">
+                  <span class="label" style="--c:215,58,74">{{label_1}}</span>
+                  <span class="label" style="--c:188,76,0">{{label_2}}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gh-foot">
+            <span class="row"><span class="avatar av-16"><img src="{{author_avatar_url}}" alt="" onerror="this.remove()"></span>{{author_login}} · {{created_at}}</span>
+            <span class="row right"><svg class="ic ic-12"><use href="#i-comment"/></svg>{{comments_count}}</span>
+          </div>
+        </article>
+      </div>
+
+      <!-- Issue · Small -->
+      <div>
+        <div class="size-tag">Small · 340px</div>
+        <article class="gh-card gh-card--s">
+          <div class="s-wrap">
+            <span class="icon-bubble green"><svg class="ic"><use href="#i-issue"/></svg></span>
+            <div class="s-main">
+              <div class="s-title">{{issue_title}}</div>
+              <div class="s-sub">{{owner}}/{{repo}} <b>#{{issue_number}}</b> · {{created_at}}</div>
+            </div>
+            <span class="row muted sm"><svg class="ic ic-12"><use href="#i-comment"/></svg>{{comments_count}}</span>
+          </div>
+        </article>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ==========================================================
+     5. USER
+     ========================================================== -->
+<section class="section" id="user">
+  <h2><svg class="ic ic-20"><use href="#i-people"/></svg> User</h2>
+  <p>用户卡片 · 大 / 中 / 小</p>
+  <div class="showcase">
+
+    <!-- User · Large -->
+    <div>
+      <div class="size-tag">Large · 640px</div>
+      <article class="gh-card gh-card--l">
+        <div class="banner"></div>
+        <div class="gh-body" style="padding-top:0">
+          <div class="profile-top">
+            <span class="avatar av-96"><img src="{{user_avatar_url}}" alt="" onerror="this.remove()"></span>
+            <div style="flex:1;min-width:0;padding-bottom:4px">
+              <h3 class="title-l ellipsis">{{user_name}}</h3>
+              <div class="muted" style="font-size:16px">@{{user_login}} <span class="sm">· {{pronouns}}</span></div>
+            </div>
+            <button class="btn" style="margin-bottom:6px">Follow</button>
+          </div>
+          <p style="margin:14px 0 12px">{{user_bio}}</p>
+          <div class="row wrap sm muted" style="gap:14px;margin-bottom:12px">
+            <span class="row"><svg class="ic"><use href="#i-org"/></svg>{{company}}</span>
+            <span class="row"><svg class="ic"><use href="#i-location"/></svg>{{location}}</span>
+            <span class="row"><svg class="ic"><use href="#i-link"/></svg><a href="#">{{blog_url}}</a></span>
+            <span class="row"><svg class="ic"><use href="#i-mail"/></svg>{{email}}</span>
+          </div>
+          <div class="row sm muted" style="gap:14px">
+            <span class="row"><svg class="ic"><use href="#i-people"/></svg><b class="fg">{{followers}}</b> followers</span>
+            <span><b class="fg">{{following}}</b> following</span>
+            <span class="row"><svg class="ic"><use href="#i-calendar"/></svg>Joined {{joined_at}}</span>
+          </div>
+
+          <div class="stat-grid cols-4" style="margin:16px 0">
+            <div><div class="v">{{public_repos}}</div><div class="k">Repositories</div></div>
+            <div><div class="v">{{total_stars}}</div><div class="k">Stars earned</div></div>
+            <div><div class="v">{{total_prs}}</div><div class="k">Pull requests</div></div>
+            <div><div class="v">{{total_contributions}}</div><div class="k">Contributions</div></div>
+          </div>
+
+          <div class="section-label">Pinned</div>
+          <div class="pinned" style="margin-bottom:16px">
+            <div>
+              <div class="row"><svg class="ic muted"><use href="#i-repo"/></svg><a class="bold ellipsis" href="#">{{pinned_repo_1}}</a><span class="badge" style="margin-left:auto">Public</span></div>
+              <p class="sm muted clamp-2" style="margin:0">{{pinned_desc_1}}</p>
+              <div class="row sm muted" style="gap:12px"><span class="row"><span class="dot" style="background:#3178c6"></span>{{pinned_lang_1}}</span><span class="row"><svg class="ic ic-12"><use href="#i-star"/></svg>{{pinned_stars_1}}</span><span class="row"><svg class="ic ic-12"><use href="#i-fork"/></svg>{{pinned_forks_1}}</span></div>
+            </div>
+            <div>
+              <div class="row"><svg class="ic muted"><use href="#i-repo"/></svg><a class="bold ellipsis" href="#">{{pinned_repo_2}}</a><span class="badge" style="margin-left:auto">Public</span></div>
+              <p class="sm muted clamp-2" style="margin:0">{{pinned_desc_2}}</p>
+              <div class="row sm muted" style="gap:12px"><span class="row"><span class="dot" style="background:#dea584"></span>{{pinned_lang_2}}</span><span class="row"><svg class="ic ic-12"><use href="#i-star"/></svg>{{pinned_stars_2}}</span><span class="row"><svg class="ic ic-12"><use href="#i-fork"/></svg>{{pinned_forks_2}}</span></div>
+            </div>
+          </div>
+
+          <div class="row" style="margin-bottom:8px"><div class="section-label" style="margin:0">{{contributions_last_year}} contributions in the last year</div></div>
+          <div class="heatmap" data-weeks="53" style="overflow:hidden"></div>
+        </div>
+        <div class="gh-foot">
+          <span class="row"><svg class="ic ic-12"><use href="#i-github"/></svg>github.com/{{user_login}}</span>
+          <span class="right row"><span class="dot" style="background:var(--heat-1)"></span><span class="dot" style="background:var(--heat-2)"></span><span class="dot" style="background:var(--heat-3)"></span><span class="dot" style="background:var(--heat-4)"></span></span>
+        </div>
+      </article>
+    </div>
+
+    <div class="size-col">
+      <!-- User · Medium -->
+      <div>
+        <div class="size-tag">Medium · 420px</div>
+        <article class="gh-card gh-card--m">
+          <div class="gh-body">
+            <div class="row" style="gap:14px;align-items:flex-start">
+              <span class="avatar av-56"><img src="{{user_avatar_url}}" alt="" onerror="this.remove()"></span>
+              <div style="flex:1;min-width:0">
+                <div class="title-m ellipsis">{{user_name}}</div>
+                <div class="muted sm">@{{user_login}}</div>
+                <p class="clamp-2 sm" style="margin:6px 0 0">{{user_bio}}</p>
+              </div>
+              <svg class="ic ic-20 muted"><use href="#i-github"/></svg>
+            </div>
+            <div class="row wrap sm muted" style="gap:12px;margin-top:12px">
+              <span class="row"><svg class="ic ic-12"><use href="#i-location"/></svg>{{location}}</span>
+              <span class="row"><svg class="ic ic-12"><use href="#i-org"/></svg>{{company}}</span>
+            </div>
+          </div>
+          <div class="stat-grid cols-3" style="border-radius:0;border-left:0;border-right:0;border-bottom:0">
+            <div><div class="v">{{public_repos}}</div><div class="k">Repos</div></div>
+            <div><div class="v">{{followers}}</div><div class="k">Followers</div></div>
+            <div><div class="v">{{following}}</div><div class="k">Following</div></div>
+          </div>
+        </article>
+      </div>
+
+      <!-- User · Small -->
+      <div>
+        <div class="size-tag">Small · 340px</div>
+        <article class="gh-card gh-card--s">
+          <div class="s-wrap">
+            <span class="avatar av-40"><img src="{{user_avatar_url}}" alt="" onerror="this.remove()"></span>
+            <div class="s-main">
+              <div class="s-title">{{user_name}}</div>
+              <div class="s-sub">@{{user_login}} · {{followers}} followers</div>
+            </div>
+            <button class="btn">Follow</button>
+          </div>
+        </article>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ==========================================================
+     6. ORGANIZATION
+     ========================================================== -->
+<section class="section" id="org">
+  <h2><svg class="ic ic-20"><use href="#i-org"/></svg> Organization</h2>
+  <p>组织卡片 · 大 / 中 / 小</p>
+  <div class="showcase">
+
+    <!-- Org · Large -->
+    <div>
+      <div class="size-tag">Large · 640px</div>
+      <article class="gh-card gh-card--l">
+        <div class="banner org"></div>
+        <div class="gh-body" style="padding-top:0">
+          <div class="profile-top">
+            <span class="avatar sq av-96 g2"><img src="{{org_avatar_url}}" alt="" onerror="this.remove()"></span>
+            <div style="flex:1;min-width:0;padding-bottom:4px">
+              <div class="row">
+                <h3 class="title-l ellipsis">{{org_name}}</h3>
+                <span class="badge green"><svg class="ic ic-12"><use href="#i-verified"/></svg>Verified</span>
+              </div>
+              <div class="muted" style="font-size:16px">@{{org_login}}</div>
+            </div>
+            <button class="btn" style="margin-bottom:6px">Follow</button>
+          </div>
+          <p style="margin:14px 0 12px">{{org_description}}</p>
+          <div class="row wrap sm muted" style="gap:14px">
+            <span class="row"><svg class="ic"><use href="#i-people"/></svg><b class="fg">{{followers}}</b> followers</span>
+            <span class="row"><svg class="ic"><use href="#i-location"/></svg>{{location}}</span>
+            <span class="row"><svg class="ic"><use href="#i-link"/></svg><a href="#">{{website_url}}</a></span>
+            <span class="row"><svg class="ic"><use href="#i-mail"/></svg>{{email}}</span>
+          </div>
+
+          <div class="stat-grid cols-4" style="margin:16px 0">
+            <div><div class="v">{{public_repos}}</div><div class="k">Repositories</div></div>
+            <div><div class="v">{{members_count}}</div><div class="k">Members</div></div>
+            <div><div class="v">{{total_stars}}</div><div class="k">Total stars</div></div>
+            <div><div class="v">{{sponsors_count}}</div><div class="k">Sponsors</div></div>
+          </div>
+
+          <div class="section-label">Top languages</div>
+          <div class="langbar" style="margin-bottom:8px">
+            <span style="width:42%;background:#3178c6"></span>
+            <span style="width:26%;background:#00add8"></span>
+            <span style="width:18%;background:#dea584"></span>
+            <span style="width:14%;background:#3572a5"></span>
+          </div>
+          <div class="row wrap sm muted" style="gap:14px;margin-bottom:16px">
+            <span class="row"><span class="dot" style="background:#3178c6"></span><b class="fg">{{lang_1}}</b> {{lang_1_pct}}</span>
+            <span class="row"><span class="dot" style="background:#00add8"></span><b class="fg">{{lang_2}}</b> {{lang_2_pct}}</span>
+            <span class="row"><span class="dot" style="background:#dea584"></span><b class="fg">{{lang_3}}</b> {{lang_3_pct}}</span>
+            <span class="row"><span class="dot" style="background:#3572a5"></span><b class="fg">{{lang_4}}</b> {{lang_4_pct}}</span>
+          </div>
+
+          <div class="section-label">Popular repositories</div>
+          <div class="pinned">
+            <div>
+              <div class="row"><svg class="ic muted"><use href="#i-repo"/></svg><a class="bold ellipsis" href="#">{{top_repo_1}}</a></div>
+              <p class="sm muted clamp-2" style="margin:0">{{top_repo_desc_1}}</p>
+              <div class="row sm muted" style="gap:12px"><span class="row"><span class="dot" style="background:#3178c6"></span>{{lang_1}}</span><span class="row"><svg class="ic ic-12"><use href="#i-star"/></svg>{{top_repo_stars_1}}</span><span class="row"><svg class="ic ic-12"><use href="#i-fork"/></svg>{{top_repo_forks_1}}</span></div>
+            </div>
+            <div>
+              <div class="row"><svg class="ic muted"><use href="#i-repo"/></svg><a class="bold ellipsis" href="#">{{top_repo_2}}</a></div>
+              <p class="sm muted clamp-2" style="margin:0">{{top_repo_desc_2}}</p>
+              <div class="row sm muted" style="gap:12px"><span class="row"><span class="dot" style="background:#00add8"></span>{{lang_2}}</span><span class="row"><svg class="ic ic-12"><use href="#i-star"/></svg>{{top_repo_stars_2}}</span><span class="row"><svg class="ic ic-12"><use href="#i-fork"/></svg>{{top_repo_forks_2}}</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="gh-foot">
+          <span class="stack">
+            <span class="avatar av-24"><img src="{{member_avatar_1}}" alt="" onerror="this.remove()"></span>
+            <span class="avatar av-24 g3"><img src="{{member_avatar_2}}" alt="" onerror="this.remove()"></span>
+            <span class="avatar av-24 g4"><img src="{{member_avatar_3}}" alt="" onerror="this.remove()"></span>
+            <span class="avatar av-24 g5"><img src="{{member_avatar_4}}" alt="" onerror="this.remove()"></span>
+            <span class="avatar av-24 g2"><img src="{{member_avatar_5}}" alt="" onerror="this.remove()"></span>
+          </span>
+          <span>+{{more_members}} members</span>
+          <span class="right row"><svg class="ic ic-12"><use href="#i-github"/></svg>github.com/{{org_login}}</span>
+        </div>
+      </article>
+    </div>
+
+    <div class="size-col">
+      <!-- Org · Medium -->
+      <div>
+        <div class="size-tag">Medium · 420px</div>
+        <article class="gh-card gh-card--m">
+          <div class="gh-body">
+            <div class="row" style="gap:14px;align-items:flex-start">
+              <span class="avatar sq av-56 g2"><img src="{{org_avatar_url}}" alt="" onerror="this.remove()"></span>
+              <div style="flex:1;min-width:0">
+                <div class="row"><span class="title-m ellipsis">{{org_name}}</span><svg class="ic verified"><use href="#i-verified"/></svg></div>
+                <div class="muted sm">@{{org_login}}</div>
+                <p class="clamp-2 sm" style="margin:6px 0 0">{{org_description}}</p>
+              </div>
+              <svg class="ic ic-20 muted"><use href="#i-github"/></svg>
+            </div>
+            <div class="row" style="margin-top:12px">
+              <div class="langbar" style="flex:1">
+                <span style="width:42%;background:#3178c6"></span>
+                <span style="width:26%;background:#00add8"></span>
+                <span style="width:18%;background:#dea584"></span>
+                <span style="width:14%;background:#3572a5"></span>
+              </div>
+            </div>
+          </div>
+          <div class="stat-grid cols-3" style="border-radius:0;border-left:0;border-right:0;border-bottom:0">
+            <div><div class="v">{{public_repos}}</div><div class="k">Repos</div></div>
+            <div><div class="v">{{members_count}}</div><div class="k">Members</div></div>
+            <div><div class="v">{{followers}}</div><div class="k">Followers</div></div>
+          </div>
+        </article>
+      </div>
+
+      <!-- Org · Small -->
+      <div>
+        <div class="size-tag">Small · 340px</div>
+        <article class="gh-card gh-card--s">
+          <div class="s-wrap">
+            <span class="avatar sq av-40 g2"><img src="{{org_avatar_url}}" alt="" onerror="this.remove()"></span>
+            <div class="s-main">
+              <div class="s-title row" style="gap:4px"><span class="ellipsis">{{org_name}}</span><svg class="ic ic-12 verified"><use href="#i-verified"/></svg></div>
+              <div class="s-sub">{{public_repos}} repos · {{members_count}} members</div>
+            </div>
+            <button class="btn">Follow</button>
+          </div>
+        </article>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+</main>
+
+<script>
+  // 主题切换
+  function toggleTheme() {
+    const el = document.documentElement;
+    el.dataset.theme = el.dataset.theme === 'dark' ? 'light' : 'dark';
+  }
+  if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.dataset.theme = 'dark';
+  }
+
+  // 贡献热力图（占位数据，可替换为真实 {{contribution_levels}} 数组）
+  document.querySelectorAll('.heatmap').forEach(function (hm) {
+    const weeks = +hm.dataset.weeks || 53;
+    let html = '';
+    for (let i = 0; i < weeks * 7; i++) {
+      const r = Math.random();
+      const lvl = r < .45 ? 0 : r < .7 ? 1 : r < .85 ? 2 : r < .95 ? 3 : 4;
+      html += '<i data-l="' + lvl + '"></i>';
+    }
+    hm.innerHTML = html;
+  });
+</script>
+</body>
+</html>
