@@ -43,11 +43,11 @@ export CLOUDFLARE_ACCOUNT_ID=你的账号ID
 pnpm run deploy:vinext
 ```
 
-配置位于 `cloudflare.config.ts` 和 `vite.config.ts`，Worker 名为 `ghcard`。启用 KV 数据缓存，在部署时自动创建 / 绑定 KV 命名空间，供 GitHub REST（5 分钟）与贡献数据（1 小时）的 fetch 缓存使用；需要账号具备 Workers KV 权限。未开启 Cloudflare Images，头像保持原图，无需额外图片服务。没有使用 OpenNext、R2 或 Pages 静态导出。
+配置位于 `cloudflare.config.ts` 和 `vite.config.ts`，Worker 名为 `ghcard`。未配置 vinext 的 KV 数据缓存适配器，部署时不再创建或绑定缓存 KV 命名空间，也不需要 Workers KV 权限。应用中的 fetch 缓存设置保留，具体行为由运行时默认实现决定。未开启 Cloudflare Images，头像保持原图，无需额外图片服务。没有使用 OpenNext、R2 或 Pages 静态导出。
 
 `GITHUB_TOKEN` 是可选的**运行时 Secret**，请在 Cloudflare 控制台为 `ghcard` 设置，不要写入配置或设置 `NEXT_PUBLIC_GITHUB_TOKEN`。不配置时热力图继续使用公开贡献 API。Cloudflare API Token 与 GitHub Token 是两个不同的凭据：前者仅用于部署，后者仅用于运行时调用 GitHub。Workers 预览所需的本地 Secret 可放在 `.dev.vars`（已忽略），Node / Next.js 开发继续使用 `.env.local`。
 
-本次接入保留应用路由和数据源，并为两套构建链补齐类型兼容；不会自动登录、创建远程资源或发布；上述部署命令由你在确认账号后执行。Workers / KV 的套餐与配额以 Cloudflare 账号为准。
+本次接入保留应用路由和数据源，并为两套构建链补齐类型兼容；不会自动登录、创建远程资源或发布；上述部署命令由你在确认账号后执行。Workers 的套餐与配额以 Cloudflare 账号为准。
 
 ## 路由
 
