@@ -24,6 +24,16 @@ pnpm run start:vinext
 
 `start:vinext` 使用 Workers 本地运行时预览；`dev:vinext` 启动独立的 Vite 开发环境，默认端口 3001。原来的 `npm run dev` 仍启动 Next.js（3000）。
 
+### Cloudflare Workers Builds 设置
+
+仓库通过 `packageManager` 固定 pnpm 12.11.2，workspace 显式包含根项目。若 Cloudflare 仍检测到 pnpm 9.10.0，请在构建环境变量中设置 `PNPM_VERSION=12.11.2` 并清理依赖缓存后重新构建，不要关闭 frozen lockfile。
+
+- 构建命令：`pnpm run build:vinext`
+- 部署命令：`pnpm exec vinext-cloudflare deploy --skip-build`
+- 根目录：仓库根目录
+
+默认的 `npx wrangler deploy` 不适用于本项目生成的 CF Build Output；请使用上面的 vinext 部署命令。
+
 ### 部署
 
 ```sh
