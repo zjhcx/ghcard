@@ -5,6 +5,9 @@ export function escapeXml(value: unknown): string {
 }
 export function heatmapMarkup(calendar: ContributionCalendar, width = 608, theme: 'light' | 'dark' = 'light'): string {
     const { days, total } = calendar;
+    if (days.length === 0) throw new RangeError('贡献日历不能为空');
+    // Reserve enough room for the date range and legend, as well as positive grid cells.
+    if (!Number.isFinite(width) || width < 360) throw new RangeError('热力图宽度必须是至少 360 的有限数值');
     const offset = new Date(`${days[0].date}T00:00:00Z`).getUTCDay();
     const columns = Math.ceil((offset + days.length) / 7);
     const step = Math.min(11, (width - 28) / columns);

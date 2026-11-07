@@ -10,6 +10,37 @@ test('sorts daily contributions, supports leap days and derives totals from disp
 test('rejects malformed, missing and duplicate dates rather than inventing zeroes', () => {
     for (const input of [[],null,[days[0],days[0]],[days[0],days[2]],[{date:'2024-02-30',count:1,level:1}],[{...days[0],count:-1}],[{...days[0],level:5}]]) assert.throws(()=>normalizeContributions(input,'public'));
 });
+test('rejects sparse days and totals outside the safe integer range', () => {
+    assert.throws(() => normalizeContributions(new Array(1), 'public'), /贡献数据格式无效/);
+    const sparse = [days[0], , days[2]];
+    assert.throws(() => normalizeContributions(sparse, 'public'), /贡献数据格式无效/);
+    assert.equal(normalizeContributions([{ ...days[0], count: Number.MAX_SAFE_INTEGER }], 'public').total, Number.MAX_SAFE_INTEGER);
+    assert.throws(() => normalizeContributions([
+        { ...days[0], count: Number.MAX_SAFE_INTEGER },
+        { ...days[1], count: 1 },
+    ], 'public'), /总数超出有效范围/);
+});
+test('rejects empty calendars and invalid rendering widths explicitly', () => {
+    assert.throws(() => heatmapMarkup({ days: [], total: 0, source: 'public' }), RangeError);
+    const calendar = normalizeContributions(days, 'public');
+    for (const width of [NaN, Infinity, -Infinity, -1, 0, 28, 359]) {
+        assert.throws(() => heatmapMarkup(calendar, width), RangeError);
+    }
+});
+test('keeps a maximum-size calendar inside the SVG at the minimum supported width', () => {
+    const start = Date.UTC(2023, 11, 30); // Saturday gives the largest leading offset.
+    const calendar = normalizeContributions(Array.from({ length: 400 }, (_, index) => ({
+        date: new Date(start + index * 86400000).toISOString().slice(0, 10), count: 0, level: 0,
+    })), 'public');
+    const svg = heatmapMarkup(calendar, 360);
+    const cells = [...svg.matchAll(/data-date="[^"]+" data-l="\d" x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/g)];
+    assert.equal(cells.length, 400);
+    for (const cell of cells) {
+        assert.ok(Number(cell[3]) > 0 && Number(cell[4]) > 0);
+        assert.ok(Number(cell[1]) + Number(cell[3]) <= 360);
+    }
+    assert.doesNotMatch(svg, /NaN|Infinity|undefined/);
+});
 test('positions days by UTC weekday, adds month labels, tooltips and theme colors', () => {
     const svg = heatmapMarkup(normalizeContributions(days,'public'));
     assert.match(svg,/data-date="2024-02-28" data-l="0" x="28.00" y="55.00"/);

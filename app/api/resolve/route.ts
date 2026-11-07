@@ -17,7 +17,8 @@ export async function GET(request: Request) {
             if (issue.pull_request)
                 target.type = 'pr';
         }
-        return NextResponse.json({ path: cardPath(size as Size, target), type: target.type });
+        const suffix = params.get('heatmap') === '1' && size === 'l' && target.type === 'user' ? '?heatmap=1' : '';
+        return NextResponse.json({ path: cardPath(size as Size, target) + suffix, type: target.type });
     }
     catch (error) {
         return NextResponse.json({ error: error instanceof Error ? error.message : '解析失败' }, { status: error instanceof GitHubError ? error.status : 400 });
