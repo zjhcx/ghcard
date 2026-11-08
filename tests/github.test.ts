@@ -41,7 +41,7 @@ test('reports missing resources and rate limiting clearly', async () => {
     try {
         mock({}, 404);
         await assert.rejects(github('/users/missing'), (e: unknown) => e instanceof GitHubError && e.status === 404);
-        mock({}, 403);
+        mock({ message: 'API rate limit exceeded' }, 403);
         await assert.rejects(github('/users/octocat'), (e: unknown) => e instanceof GitHubError && e.status === 429);
         globalThis.fetch = async () => { throw new Error('network failure'); };
         await assert.rejects(github('/users/octocat'), (e: unknown) => e instanceof GitHubError && e.status === 502);
@@ -49,6 +49,48 @@ test('reports missing resources and rate limiting clearly', async () => {
     finally {
         globalThis.fetch = originalFetch;
     }
+});
+
+test('sends an explicit User-Agent on Workers, with optional server authentication', async () => {
+    const savedToken = process.env.GITHUB_TOKEN;
+    try {
+        for (const token of [undefined, '  ', ' test-token ']) {
+            if (token === undefined) delete process.env.GITHUB_TOKEN;
+            else process.env.GITHUB_TOKEN = token;
+            globalThis.fetch = async (_url, options) => {
+                const headers = new Headers(options?.headers);
+                assert.equal(headers.get('User-Agent'), 'ghcard');
+                assert.equal(headers.get('Accept'), 'application/vnd.github+json');
+                assert.equal(headers.get('X-GitHub-Api-Version'), '2022-11-28');
+                assert.equal(headers.get('Authorization'), token?.trim() ? 'Bearer test-token' : null);
+                return Response.json({ login: 'octocat' });
+            };
+            await github('/users/octocat');
+        }
+    } finally {
+        globalThis.fetch = originalFetch;
+        if (savedToken === undefined) delete process.env.GITHUB_TOKEN;
+        else process.env.GITHUB_TOKEN = savedToken;
+    }
+});
+
+test('distinguishes forbidden responses from primary and secondary rate limits', async () => {
+    try {
+        const cases = [
+            { status: 403, headers: {}, message: 'User agent required', expected: 403 },
+            { status: 403, headers: {}, message: 'Resource not accessible by personal access token', expected: 403 },
+            { status: 403, headers: { 'x-ratelimit-remaining': '0' }, message: '', expected: 429 },
+            { status: 403, headers: { 'retry-after': '60' }, message: '', expected: 429 },
+            { status: 403, headers: {}, message: 'You have exceeded a secondary rate limit.', expected: 429 },
+            { status: 429, headers: {}, message: '', expected: 429 },
+        ];
+        for (const entry of cases) {
+            globalThis.fetch = async () => Response.json({ message: entry.message }, { status: entry.status, headers: entry.headers as HeadersInit });
+            await assert.rejects(github('/users/octocat'), (e: unknown) => e instanceof GitHubError && e.status === entry.expected);
+        }
+        globalThis.fetch = async () => new Response('Forbidden', { status: 403 });
+        await assert.rejects(github('/users/octocat'), (e: unknown) => e instanceof GitHubError && e.status === 403);
+    } finally { globalThis.fetch = originalFetch; }
 });
 
 test('large user cards do not request contributions by default', async () => {

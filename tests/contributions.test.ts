@@ -54,6 +54,7 @@ test('loads official GraphQL when token exists, otherwise uses public last-year 
         globalThis.fetch = (async (url, options) => {
             assert.equal(String(url),'https://api.github.com/graphql');
             assert.equal(new Headers(options?.headers).get('Authorization'),'Bearer test-token');
+            assert.equal(new Headers(options?.headers).get('User-Agent'),'ghcard');
             assert.equal(JSON.parse(String(options?.body)).variables.login,'octocat');
             const contributionDays = days.map(d => ({
                 date: d.date,

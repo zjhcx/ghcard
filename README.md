@@ -47,6 +47,28 @@ pnpm run deploy:vinext
 
 `GITHUB_TOKEN` 是可选的**运行时 Secret**，请在 Cloudflare 控制台为 `ghcard` 设置，不要写入配置或设置 `NEXT_PUBLIC_GITHUB_TOKEN`。不配置时热力图继续使用公开贡献 API。Cloudflare API Token 与 GitHub Token 是两个不同的凭据：前者仅用于部署，后者仅用于运行时调用 GitHub。Workers 预览所需的本地 Secret 可放在 `.dev.vars`（已忽略），Node / Next.js 开发继续使用 `.env.local`。
 
+### 无 Token 与第三方代理（GHPROXY）
+
+Worker 和 Node.js 均支持无 Token 请求，无需强制设置 `GITHUB_TOKEN`。可在 Worker 的 **Settings → Variables and Secrets** 添加运行时变量 `GHPROXY`，或在本地环境文件中配置：
+
+```dotenv
+GHPROXY=https://proxy.example/
+```
+
+该变量采用 **代理前缀** 格式：请求 `/users/octocat` 时访问 `https://proxy.example/https://api.github.com/users/octocat`。支持代理前缀中的路径，自动处理末尾斜杠，保留上游路径编码和查询参数。代理必须支持 GitHub REST API 并返回原始 JSON / 状态码；仅支持下载文件的 ghproxy 服务不适用。只接受 HTTPS 前缀，不接受 URL 凭据、查询参数或片段。
+
+- `GHPROXY` 未设置或为空：直接请求 GitHub，可选使用 `GITHUB_TOKEN`。
+- 设置 `GHPROXY`：所有卡片 REST 请求使用代理，**不会向代理发送 `GITHUB_TOKEN`**；两者同时配置时，REST 仍走无 Token 代理。
+- 热力图保持原逻辑：有 Token 时 GraphQL **直连 GitHub**，无 Token 时使用现有公开第三方贡献接口；不经过 `GHPROXY`。
+- 代理故障或限流会正常报错，不会自动切换服务或循环重试。第三方服务的可靠性与额度由服务方决定，请仅使用可信代理。此配置不代理头像，也不是浏览器公开变量。
+
+### GitHub API 拒绝访问 / 限流排查
+
+- GitHub API 要求请求携带 `User-Agent`。Workers 的 `fetch` 不会像 Node.js 一样自动补齐默认值，因此应用为 REST 和 GraphQL 请求显式设置 `User-Agent: ghcard`。缺失该头导致的 `403` 不是真正的额度耗尽，不能仅靠添加 Token 解决。
+- 应用仅在 GitHub 返回 `429`、剩余额度为 `0`、`Retry-After` 或限流消息时提示限流；其他 `403` 提示检查请求配置或 Token 权限。
+- 真正触发匿名额度限制时，在 **Workers & Pages → ghcard → Settings → Variables and Secrets** 添加类型为 **Secret**、名称为 `GITHUB_TOKEN` 的 GitHub Token 并部署生效。只设置 Workers Builds 的构建变量不会将其作为运行时 Secret 提供给 Worker。不要将 Token 提交到仓库。
+- 未配置 Token 的 REST 请求使用按来源 IP 计算的匿名额度；Worker 出口可能共享额度。配置 Token 能提高额度，但不保证永不触发 GitHub 的主限流或次级限流；触发后应等待额度恢复，不要连续重试。
+
 本次接入保留应用路由和数据源，并为两套构建链补齐类型兼容；不会自动登录、创建远程资源或发布；上述部署命令由你在确认账号后执行。Workers 的套餐与配额以 Cloudflare 账号为准。
 
 ## 路由

@@ -1,5 +1,6 @@
 import { loadContributions, type ContributionResult } from './contributions';
 import type { CardType, Target } from './routes';
+import { githubRequest } from './github-headers';
 export class GitHubError extends Error {
     constructor(message: string, public status = 502) { super(message); }
 }
@@ -111,12 +112,12 @@ export interface CardData {
     contributionsEnabled?: boolean;
 }
 export async function github<T>(path: string): Promise<T> {
-    const headers: Record<string, string> = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
-    if (process.env.GITHUB_TOKEN)
-        headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+    let request: ReturnType<typeof githubRequest>;
+    try { request = githubRequest(path); }
+    catch { throw new GitHubError('服务器的 GHPROXY 配置无效，请使用 HTTPS 代理前缀。', 500); }
     let response: Response;
     try {
-        response = await fetch(`https://api.github.com${path}`, { headers, next: { revalidate: 300 }, signal: AbortSignal.timeout(12000) });
+        response = await fetch(request.url, { headers: request.headers, next: { revalidate: 300 }, signal: AbortSignal.timeout(12000) });
     }
     catch {
         throw new GitHubError('暂时无法连接 GitHub，请稍后重试。');
@@ -124,8 +125,19 @@ export async function github<T>(path: string): Promise<T> {
     if (!response.ok) {
         if (response.status === 404)
             throw new GitHubError('GitHub 上找不到该内容，或它属于私有项目。', 404);
-        if (response.status === 403 || response.status === 429)
-            throw new GitHubError('GitHub API 请求受到限制，请稍后重试，或为服务器配置 GITHUB_TOKEN。', 429);
+        if (response.status === 403 || response.status === 429) {
+            // GitHub also uses 403 for missing User-Agent and insufficient permissions.
+            // Only identify it as rate limiting when GitHub provides evidence.
+            const body: unknown = await response.json().catch(() => null);
+            const message = body && typeof body === 'object' && 'message' in body && typeof body.message === 'string' ? body.message : '';
+            const rateLimited = response.status === 429
+                || response.headers.get('x-ratelimit-remaining') === '0'
+                || response.headers.has('retry-after')
+                || /rate limit|secondary rate|abuse detection/i.test(message);
+            if (rateLimited)
+                throw new GitHubError('GitHub API 请求受到限制，请稍后重试，或检查服务器的 GITHUB_TOKEN / GHPROXY 配置。', 429);
+            throw new GitHubError('GitHub API 拒绝访问，请检查服务器的请求配置及 GITHUB_TOKEN 权限。', 403);
+        }
         if (response.status === 401)
             throw new GitHubError('服务器的 GitHub Token 无效，请检查配置。', 401);
         throw new GitHubError('GitHub 暂时未能返回数据，请稍后重试。');

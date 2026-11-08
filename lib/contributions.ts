@@ -1,3 +1,5 @@
+import { githubHeaders } from './github-headers';
+
 export interface ContributionDay { date: string; count: number; level: number }
 export interface ContributionCalendar { days: ContributionDay[]; total: number; source: 'github' | 'public' }
 export interface ContributionResult { calendar?: ContributionCalendar; error?: string }
@@ -33,10 +35,10 @@ const query = `query Contributions($login: String!) {
 export async function loadContributions(login: string): Promise<ContributionResult> {
     if (!/^[a-z\d](?:[a-z\d-]{0,38})$/i.test(login)) return { error: '无法读取此用户的贡献数据' };
     try {
-        const token = process.env.GITHUB_TOKEN;
-        if (token) {
+        const headers = githubHeaders();
+        if (headers.Authorization) {
             const response = await fetch('https://api.github.com/graphql', {
-                method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query, variables: { login } }), next: { revalidate: 3600 }, signal: AbortSignal.timeout(10000),
             });
             if (!response.ok) throw new Error('贡献接口请求失败');
